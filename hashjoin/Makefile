@@ -1,43 +1,39 @@
 ###############################################################################
 # Makefile to build the HashJoin workload
-#
-# Paper: Mitosis - Mitosis: Transparently Self-Replicating Page-Tables
-#                  for Large-Memory Machines
-# Authors: Reto Achermann, Jayneel Gandhi, Timothy Roscoe,
-#          Abhishek Bhattacharjee, and Ashish Panwar
 ###############################################################################
 
 CC = gcc
 CXX = g++
 
-# cflags used
-CFLAGS=-O3 -march=native
-CXXFLAGS=-O3 -march=native
+# Include flags if passed from parent, otherwise set default
+CFLAGS ?= -O3 -march=native
+CXXFLAGS ?= -O3 -march=native
 
-# common libraries used
-COMMON_LIBS=-lrt -ldl -lnuma -lpthread -lm
+# Sources for the library (excluding main.c)
+LIB_SRC = src/hashjoin.c src/murmurhash.c
+DEPS = src/config.h src/murmur3.h
 
-# common main functions for multithreaded, single threaded and page-table dump
-SRC_M=src/main.c src/hashjoin.c src/murmurhash.c
-SRC_S=src/main.c src/hashjoin.c src/murmurhash.c
-DEPS=src/config.h src/murmur3.h
+# Object files
+OBJS = $(LIB_SRC:.c=.o)
+OBJS_OMP = $(LIB_SRC:.c=.omp.o)
 
-# the targets
-all : bin/bench_hashjoin_st bin/bench_hashjoin_mt
+all: libhashjoin.a libhashjoinomp.a
 
-###############################################################################
-# HashJoin
-###############################################################################
+# Target for Single-Threaded Static Library
+libhashjoin.a: $(OBJS)
+	ar rcs $@ $(OBJS)
 
-bin/bench_hashjoin_st: $(SRC_S) $(DEPS)
-	$(CC) $(INCLUDES) $(CFLAGS) $(SRC_S) -o $@  $(COMMON_LIBS)
+# Target for Multi-Threaded Static Library
+libhashjoinomp.a: $(OBJS_OMP)
+	ar rcs $@ $(OBJS_OMP)
 
-bin/bench_hashjoin_mt:  $(SRC_M) $(DEPS)
-	$(CC) $(INCLUDES) $(CFLAGS) -fopenmp $(SRC_M) -o $@  $(COMMON_LIBS)
+# Compilation rule for standard objects
+%.o: %.c $(DEPS)
+	$(CC) $(CFLAGS) -c $< -o $@
 
-###############################################################################
-# Clean
-###############################################################################
+# Compilation rule for OpenMP objects (using a different suffix to avoid conflict)
+%.omp.o: %.c $(DEPS)
+	$(CC) $(CFLAGS) -fopenmp -c $< -o $@
 
 clean:
-	rm -rf bin/*
+	rm -f src/*.o src/*.a *.a bin/*
