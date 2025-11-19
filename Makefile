@@ -10,7 +10,7 @@
 all: btree canneal graph500 gups xsbench redis stream hashjoin
 
 clean-all: clean-btree clean-canneal clean-graph500 clean-gups clean-xsbench \
-	clean-redis
+	clean-redis clean-hashjoin
 
 
 ###############################################################################
